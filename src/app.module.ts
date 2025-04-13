@@ -6,6 +6,7 @@ import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthMiddleware } from './common/middleware/auth.middleware';
 import { ResponseTimeMiddleware } from './common/middleware/response-time.middleware';
+import { ChargingStationModule } from './modules/stations/stations.module';
 
 
 @Module({
@@ -23,11 +24,12 @@ import { ResponseTimeMiddleware } from './common/middleware/response-time.middle
     }),
     UsersModule,
     AuthModule,
+    ChargingStationModule
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(AuthMiddleware).exclude('/auth/login').forRoutes('*');
+    consumer.apply(AuthMiddleware).forRoutes('*');
     consumer.apply(ResponseTimeMiddleware).forRoutes('*'); 
   }
 }

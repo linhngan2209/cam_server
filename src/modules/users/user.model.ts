@@ -2,7 +2,7 @@ import { prop, modelOptions } from '@typegoose/typegoose';
 
 @modelOptions({
   schemaOptions: {
-    timestamps: true, 
+    timestamps: true,
   },
 })
 export class User {
@@ -13,6 +13,12 @@ export class User {
   email: string;
 
   @prop({ required: true })
+  phone: string;
+
+  @prop({
+    required: true,
+    default: 'user',
+  }) 
   role: string;
 
   @prop({ required: true })

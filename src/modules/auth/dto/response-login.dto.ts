@@ -1,7 +1,8 @@
-import { Expose } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 
 export class LoginResDto {
     @Expose()
+    @Type(() => String) 
     _id: string;
 
     @Expose()
@@ -11,7 +12,10 @@ export class LoginResDto {
     email: string;
 
     @Expose()
-    password: string;
+    phone: string;
+
+    @Expose() 
+    password?: string;
 
     @Expose()
     role: string;

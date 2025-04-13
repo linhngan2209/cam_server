@@ -1,28 +1,90 @@
-// src/common/middleware/auth.middleware.ts
-import { Injectable, NestMiddleware } from '@nestjs/common';
+import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
+  private readonly PUBLIC_ROUTES = [
+    '/auth/login',
+    '/users/create-user',
+  ];
+
   constructor(private readonly jwtService: JwtService) {}
 
   use(req: Request, res: Response, next: NextFunction) {
-    const authHeader = req.headers['authorization'];
+  
+    const requestPath = this.normalizePath(req.originalUrl || req.url);
+
+    if (this.isPublicRoute(requestPath)) {
+      return next();
+    }
+
+    const authHeader = req.headers.authorization;
     if (!authHeader) {
-      throw new UnauthorizedException('Authorization header missing');
+      throw new UnauthorizedException({
+        errorCode: 'MISSING_AUTH_HEADER',
+        message: 'Authorization header is required',
+      });
     }
-    const token = authHeader.split(' ')[1]; 
-    if (!token) {
-      throw new UnauthorizedException('Token missing');
+
+    const [bearer, token] = authHeader.split(' ');
+    if (bearer !== 'Bearer' || !token) {
+      throw new UnauthorizedException({
+        errorCode: 'INVALID_TOKEN_FORMAT',
+        message: 'Token should be in format: Bearer <token>',
+      });
     }
+
     try {
-      const decoded = this.jwtService.verify(token); 
-      req.user = decoded; 
-      next(); 
+      const payload = this.jwtService.verify(token, {
+        ignoreExpiration: false, 
+      });
+
+      req.user = {
+        id: payload.sub,
+        email: payload.email,
+        role: payload.role,
+      };
+
+      next();
     } catch (error) {
-      throw new UnauthorizedException('Invalid or expired token');
+      let errorMessage = 'Invalid token';
+      let errorCode = 'INVALID_TOKEN';
+
+      if (error.name === 'TokenExpiredError') {
+        errorMessage = 'Token expired';
+        errorCode = 'TOKEN_EXPIRED';
+      } else if (error.name === 'JsonWebTokenError') {
+        errorMessage = 'Malformed token';
+        errorCode = 'MALFORMED_TOKEN';
+      }
+
+      throw new UnauthorizedException({
+        errorCode,
+        message: errorMessage,
+      });
     }
+  }
+
+
+  private normalizePath(path: string): string {
+    const cleanPath = path.split('?')[0];
+    
+    const normalizedPath = cleanPath.startsWith('/') 
+      ? cleanPath 
+      : `/${cleanPath}`;
+    
+    return normalizedPath.length > 1 && normalizedPath.endsWith('/')
+      ? normalizedPath.slice(0, -1)
+      : normalizedPath;
+  }
+
+
+  private isPublicRoute(path: string): boolean {
+    const normalizedPath = this.normalizePath(path);
+    return this.PUBLIC_ROUTES.some(publicRoute => {
+      return normalizedPath === publicRoute || 
+             normalizedPath.startsWith(`${publicRoute}/`);
+    });
   }
 }

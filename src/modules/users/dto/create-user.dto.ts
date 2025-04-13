@@ -1,4 +1,4 @@
-import { IsString, IsEmail, MinLength } from 'class-validator';
+import { IsString, IsEmail, MinLength, IsOptional, IsIn, MaxLength } from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
@@ -8,9 +8,16 @@ export class CreateUserDto {
   readonly email: string;
 
   @IsString()
+  @MinLength(10)
+  @MaxLength(11)
+  readonly phone: string;
+
+  @IsString()
   @MinLength(6)
   readonly password: string;
 
+  @IsOptional()
   @IsString()
-  readonly role: string;
+  @IsIn(['user', 'admin'], { message: 'Role phải là user hoặc admin' })
+  readonly role: string = 'user'; 
 }
